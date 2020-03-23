@@ -31,7 +31,7 @@ def initial_endpoint():
         else:
             # If the caller didn't choose 1 or 2, apologize and ask them again
             resp.say("Es tut mir Leid, das habe ich leider nicht verstanden", voice="woman", language="de")
-            resp.say("Sorry, I didn't understand that choice.", voice="woman", language="en-gb")
+            resp.say("Sorry, I don't understand that choice.", voice="woman", language="en-gb")
 
     # Start our <Gather> verb
     gather = Gather(num_digits=1)
@@ -55,6 +55,11 @@ def german_initial():
              "Da sich unser Dienst erst in der Entwicklungsphase befindet, " +
              "bekommen Sie auf diese Anfrage noch keinen Rückruf.", voice="woman", language="de")
 
+    resp.say("Wenn sie unseren Dienst unterstützen möchten, können sie uns jetzt schon " +
+             "drei kurze Fragen beantworten. Falls Sie dies nicht tun möchten, legen Sie einfach auf.", voice="woman", language="de")
+
+    resp.redirect('/german/question/1')
+
     return str(resp)
 
 
@@ -68,5 +73,93 @@ def english_initial():
     resp.say("Thank you for calling and being interested in our service. " +
              "Since our services are still in development, this call will not " +
              "be answered.", voice="woman", language="en-gb")
+
+    return str(resp)
+
+
+@app.route("/german/question/1", methods=['GET', 'POST'])
+def german_question_1():
+    # Start our TwiML response
+    resp = VoiceResponse()
+
+    if 'Digits' in request.values:
+        # Get which digit the caller chose
+        choice = request.values['Digits']
+
+        # <Say> a different message depending on the caller's choice
+        if choice == '1':
+            resp.say("Vielen Dank für Ihr Interesse!", voice="woman", language="de")
+            resp.redirect("/german/question/2")
+            return str(resp)
+        elif choice == '2':
+            resp.say('Vielen Dank für ihren Anruf!', voice="woman", language="de")
+            return str(resp)
+        else:
+            # If the caller didn't choose 1 or 2, apologize and ask them again
+            resp.say("Es tut mir Leid, das habe ich leider nicht verstanden", voice="woman", language="de")
+
+    gather = Gather(num_digits=1)
+    gather.say("Würden Sie unseren Dienst als Anrufer oder als freiwilliger "
+               "Helfer in Anspruch nehmen?", voice="woman", language="de")
+    gather.say("Drücken Sie 1 für ja. Drücken sie 2 für nein.", voice="woman", language="de")
+    resp.append(gather)
+
+    resp.redirect('/german/question/1')
+
+    return str(resp)
+
+
+@app.route("/german/question/2", methods=['GET', 'POST'])
+def german_question_2():
+    # Start our TwiML response
+    resp = VoiceResponse()
+
+    if 'Digits' in request.values:
+        # Get which digit the caller chose
+        choice = request.values['Digits']
+
+        # <Say> a different message depending on the caller's choice
+        if choice in ["1", "2"]:
+            # TODO: Save in Database
+            resp.redirect("/german/question/3")
+            return str(resp)
+        else:
+            # If the caller didn't choose 1 or 2, apologize and ask them again
+            resp.say("Es tut mir Leid, das habe ich leider nicht verstanden", voice="woman", language="de")
+
+    gather = Gather(num_digits=1)
+    gather.say("Würden Sie dies als Anrufer oder als freiwilliger Helfer tun?", voice="woman", language="de")
+    gather.say("Drücken Sie 1 für Anrufer. Drücken sie 2 für Helfer.", voice="woman", language="de")
+    resp.append(gather)
+
+    resp.redirect('/german/question/2')
+
+    return str(resp)
+
+@app.route("/german/question/3", methods=['GET', 'POST'])
+def german_question_3():
+    # Start our TwiML response
+    resp = VoiceResponse()
+    gather = Gather(num_digits=6, finish_on_key="#")
+
+    if 'Digits' in request.values:
+        # Get which digit the caller chose
+        digits = request.values['Digits']
+        finished_on_key = request.values['FinishedOnKey']
+
+        if len(digits) == 5 and finished_on_key == "#":
+            # TODO: Save in Database
+            resp.say("Vielen Dank für Ihre Teilnahme! Auf Wiederhören!", voice="woman", language="de")
+            return str(resp)
+        else:
+            gather.say("Bitte geben Sie ihre Postleitzahl an.", voice="woman", language="de")
+    else:
+        gather.say("Sie können uns noch mehr unterstützen, indem Sie ihre Postleitzahl angeben.", voice="woman", language="de")
+
+    gather.say("Bestätigen Sie die Postleitzahl mit der Raute-Taste.", voice="woman", language="de")
+    gather.say("Um von vorne zu beginnen, warten Sie einfach ab.", voice="woman", language="de")
+    resp.append(gather)
+
+    resp.redirect('/german/question/3')
 
     return str(resp)
