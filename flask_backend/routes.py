@@ -31,7 +31,7 @@ def initial_endpoint():
         else:
             # If the caller didn't choose 1 or 2, apologize and ask them again
             resp.say("Es tut mir Leid, das habe ich leider nicht verstanden", voice="woman", language="de")
-            resp.say("Sorry, I don't understand that choice.", voice="woman", language="en-gb")
+            resp.say("Sorry, I didn't understand that choice.", voice="woman", language="en-gb")
 
     # Start our <Gather> verb
     gather = Gather(num_digits=1)
@@ -74,6 +74,11 @@ def english_initial():
              "Since our services are still in development, this call will not " +
              "be answered.", voice="woman", language="en-gb")
 
+    resp.say("If you want to support us on our journey, you can answer three short questions for us. " +
+             "If you don't want that, you can just hang up.", voice="woman", language="en-gb")
+
+    resp.redirect('/english/question/1')
+
     return str(resp)
 
 
@@ -92,7 +97,7 @@ def german_question_1():
             resp.redirect("/german/question/2")
             return str(resp)
         elif choice == '2':
-            resp.say('Vielen Dank für ihren Anruf!', voice="woman", language="de")
+            resp.say('Vielen Dank für ihren Anruf! Auf Wiederhören!', voice="woman", language="de")
             return str(resp)
         else:
             # If the caller didn't choose 1 or 2, apologize and ask them again
@@ -136,6 +141,7 @@ def german_question_2():
 
     return str(resp)
 
+
 @app.route("/german/question/3", methods=['GET', 'POST'])
 def german_question_3():
     # Start our TwiML response
@@ -161,5 +167,93 @@ def german_question_3():
     resp.append(gather)
 
     resp.redirect('/german/question/3')
+
+    return str(resp)
+
+
+@app.route("/english/question/1", methods=['GET', 'POST'])
+def english_question_1():
+    # Start our TwiML response
+    resp = VoiceResponse()
+
+    if 'Digits' in request.values:
+        # Get which digit the caller chose
+        choice = request.values['Digits']
+
+        # <Say> a different message depending on the caller's choice
+        if choice == '1':
+            resp.say("Thank you for your interest!", voice="woman", language="en-gb")
+            resp.redirect("/english/question/2")
+            return str(resp)
+        elif choice == '2':
+            resp.say('Thank you for your call! Goodbye!', voice="woman", language="en-gb")
+            return str(resp)
+        else:
+            # If the caller didn't choose 1 or 2, apologize and ask them again
+            resp.say("Sorry, I didn't understand that choice.", voice="woman", language="en-gb")
+
+    gather = Gather(num_digits=1)
+    gather.say("Would you make use of our services, either as a caller or as a volunteer?", voice="woman", language="en-gb")
+    gather.say("Press 1 for yes. Press 2 for no.", voice="woman", language="en-gb")
+    resp.append(gather)
+
+    resp.redirect('/english/question/1')
+
+    return str(resp)
+
+
+@app.route("/english/question/2", methods=['GET', 'POST'])
+def english_question_2():
+    # Start our TwiML response
+    resp = VoiceResponse()
+
+    if 'Digits' in request.values:
+        # Get which digit the caller chose
+        choice = request.values['Digits']
+
+        # <Say> a different message depending on the caller's choice
+        if choice in ["1", "2"]:
+            # TODO: Save in Database
+            resp.redirect("/english/question/3")
+            return str(resp)
+        else:
+            # If the caller didn't choose 1 or 2, apologize and ask them again
+            resp.say("Sorry, I didn't understand that choice.", voice="woman", language="en-gb")
+
+    gather = Gather(num_digits=1)
+    gather.say("If so, as a caller or as a volunteer?", voice="woman", language="en-gb")
+    gather.say("Press 1 for caller. Press 2 for volunteer.", voice="woman", language="en-gb")
+    resp.append(gather)
+
+    resp.redirect('/english/question/2')
+
+    return str(resp)
+
+
+@app.route("/english/question/3", methods=['GET', 'POST'])
+def english_question_3():
+    # Start our TwiML response
+    resp = VoiceResponse()
+    gather = Gather(num_digits=6, finish_on_key="#")
+
+    if 'Digits' in request.values:
+        # Get which digit the caller chose
+        digits = request.values['Digits']
+        finished_on_key = request.values['FinishedOnKey']
+
+        if len(digits) == 5 and finished_on_key == "#":
+            # TODO: Save in Database
+            resp.say("Thank your for your contribution! Goodbye!", voice="woman", language="en-gb")
+            return str(resp)
+        else:
+            gather.say("Please enter your zip code.", voice="woman", language="en-gb")
+    else:
+        gather.say("You can support us even more, if you enter your zip code.", voice="woman", language="en-gb")
+
+    gather.say("Please confirm, by using the hash-key.", voice="woman", language="en-gb")
+    gather.say("To start over, just hold the line", voice="woman", language="en-gb")
+    resp.append(gather)
+
+    resp.redirect('/english/question/3')
 
     return str(resp)
