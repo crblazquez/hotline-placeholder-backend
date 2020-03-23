@@ -3,6 +3,8 @@ from flask import request
 from flask_backend import app
 from twilio.twiml.voice_response import VoiceResponse, Gather
 
+from flask_backend.models.db_scripts import create_call, edit_call
+
 
 @app.route("/")
 def hello():
@@ -11,6 +13,15 @@ def hello():
 
 @app.route("/hotline", methods=['GET', 'POST'])
 def initial_endpoint():
+    call_id = create_call()
+    resp = VoiceResponse()
+    resp.redirect(f'/hotline/{call_id}')
+    return str(resp)
+
+
+@app.route("/hotline/<call_id>", methods=['GET', 'POST'])
+def endpoint_with_id(call_id):
+
     """Respond to incoming phone calls with a menu of options"""
     # Start our TwiML response
     resp = VoiceResponse()
@@ -23,10 +34,12 @@ def initial_endpoint():
 
         # <Say> a different message depending on the caller's choice
         if choice == '1':
-            resp.redirect('/german/initial')
+            edit_call(call_id, "language", "deutsch")
+            resp.redirect(f'/german/initial/{call_id}')
             return str(resp)
         elif choice == '2':
-            resp.redirect('/english/initial')
+            edit_call(call_id, "language", "english")
+            resp.redirect(f'/english/initial/{call_id}')
             return str(resp)
         else:
             # If the caller didn't choose 1 or 2, apologize and ask them again
@@ -40,13 +53,13 @@ def initial_endpoint():
     resp.append(gather)
 
     # If the user doesn't select an option, redirect them into a loop
-    resp.redirect('/hotline')
+    resp.redirect(f'/hotline/{call_id}')
 
     return str(resp)
 
 
-@app.route("/german/initial", methods=['GET', 'POST'])
-def german_initial():
+@app.route("/german/initial/<call_id>", methods=['GET', 'POST'])
+def german_initial(call_id):
     # Start our TwiML response
     resp = VoiceResponse()
 
@@ -58,13 +71,13 @@ def german_initial():
     resp.say("Wenn sie unseren Dienst unterstützen möchten, können sie uns jetzt schon " +
              "drei kurze Fragen beantworten. Falls Sie dies nicht tun möchten, legen Sie einfach auf.", voice="woman", language="de")
 
-    resp.redirect('/german/question/1')
+    resp.redirect(f'/german/question/1/{call_id}')
 
     return str(resp)
 
 
-@app.route("/english/initial", methods=['GET', 'POST'])
-def english_initial():
+@app.route("/english/initial/<call_id>", methods=['GET', 'POST'])
+def english_initial(call_id):
     # Start our TwiML response
     resp = VoiceResponse()
 
@@ -77,13 +90,13 @@ def english_initial():
     resp.say("If you want to support us on our journey, you can answer three short questions for us. " +
              "If you don't want that, you can just hang up.", voice="woman", language="en-gb")
 
-    resp.redirect('/english/question/1')
+    resp.redirect(f'/english/question/1/{call_id}')
 
     return str(resp)
 
 
-@app.route("/german/question/1", methods=['GET', 'POST'])
-def german_question_1():
+@app.route("/german/question/1/<call_id>", methods=['GET', 'POST'])
+def german_question_1(call_id):
     # Start our TwiML response
     resp = VoiceResponse()
 
@@ -93,10 +106,12 @@ def german_question_1():
 
         # <Say> a different message depending on the caller's choice
         if choice == '1':
+            edit_call(call_id, "answer_1", 1)
             resp.say("Vielen Dank für Ihr Interesse!", voice="woman", language="de")
-            resp.redirect("/german/question/2")
+            resp.redirect(f"/german/question/2/{call_id}")
             return str(resp)
         elif choice == '2':
+            edit_call(call_id, "answer_1", 2)
             resp.say('Vielen Dank für ihren Anruf! Auf Wiederhören!', voice="woman", language="de")
             return str(resp)
         else:
@@ -109,13 +124,13 @@ def german_question_1():
     gather.say("Drücken Sie 1 für ja. Drücken sie 2 für nein.", voice="woman", language="de")
     resp.append(gather)
 
-    resp.redirect('/german/question/1')
+    resp.redirect(f'/german/question/1/{call_id}')
 
     return str(resp)
 
 
-@app.route("/german/question/2", methods=['GET', 'POST'])
-def german_question_2():
+@app.route("/german/question/2/<call_id>", methods=['GET', 'POST'])
+def german_question_2(call_id):
     # Start our TwiML response
     resp = VoiceResponse()
 
@@ -125,8 +140,8 @@ def german_question_2():
 
         # <Say> a different message depending on the caller's choice
         if choice in ["1", "2"]:
-            # TODO: Save in Database
-            resp.redirect("/german/question/3")
+            edit_call(call_id, "answer_2", int(choice))
+            resp.redirect(f"/german/question/3/{call_id}")
             return str(resp)
         else:
             # If the caller didn't choose 1 or 2, apologize and ask them again
@@ -137,13 +152,13 @@ def german_question_2():
     gather.say("Drücken Sie 1 für Anrufer. Drücken sie 2 für Helfer.", voice="woman", language="de")
     resp.append(gather)
 
-    resp.redirect('/german/question/2')
+    resp.redirect(f'/german/question/2/{call_id}')
 
     return str(resp)
 
 
-@app.route("/german/question/3", methods=['GET', 'POST'])
-def german_question_3():
+@app.route("/german/question/3/<call_id>", methods=['GET', 'POST'])
+def german_question_3(call_id):
     # Start our TwiML response
     resp = VoiceResponse()
     gather = Gather(num_digits=6, finish_on_key="#")
@@ -154,7 +169,7 @@ def german_question_3():
         finished_on_key = request.values['FinishedOnKey']
 
         if len(digits) == 5 and finished_on_key == "#":
-            # TODO: Save in Database
+            edit_call(call_id, "zip_code", digits)
             resp.say("Vielen Dank für Ihre Teilnahme! Auf Wiederhören!", voice="woman", language="de")
             return str(resp)
         else:
@@ -166,13 +181,13 @@ def german_question_3():
     gather.say("Um von vorne zu beginnen, warten Sie einfach ab.", voice="woman", language="de")
     resp.append(gather)
 
-    resp.redirect('/german/question/3')
+    resp.redirect(f'/german/question/3/{call_id}')
 
     return str(resp)
 
 
-@app.route("/english/question/1", methods=['GET', 'POST'])
-def english_question_1():
+@app.route("/english/question/1/<call_id>", methods=['GET', 'POST'])
+def english_question_1(call_id):
     # Start our TwiML response
     resp = VoiceResponse()
 
@@ -182,10 +197,12 @@ def english_question_1():
 
         # <Say> a different message depending on the caller's choice
         if choice == '1':
+            edit_call(call_id, "answer_1", 1)
             resp.say("Thank you for your interest!", voice="woman", language="en-gb")
-            resp.redirect("/english/question/2")
+            resp.redirect(f"/english/question/2/{call_id}")
             return str(resp)
         elif choice == '2':
+            edit_call(call_id, "answer_1", 2)
             resp.say('Thank you for your call! Goodbye!', voice="woman", language="en-gb")
             return str(resp)
         else:
@@ -197,13 +214,13 @@ def english_question_1():
     gather.say("Press 1 for yes. Press 2 for no.", voice="woman", language="en-gb")
     resp.append(gather)
 
-    resp.redirect('/english/question/1')
+    resp.redirect(f'/english/question/1/{call_id}')
 
     return str(resp)
 
 
-@app.route("/english/question/2", methods=['GET', 'POST'])
-def english_question_2():
+@app.route("/english/question/2/<call_id>", methods=['GET', 'POST'])
+def english_question_2(call_id):
     # Start our TwiML response
     resp = VoiceResponse()
 
@@ -213,8 +230,8 @@ def english_question_2():
 
         # <Say> a different message depending on the caller's choice
         if choice in ["1", "2"]:
-            # TODO: Save in Database
-            resp.redirect("/english/question/3")
+            edit_call(call_id, "answer_2", int(choice))
+            resp.redirect(f"/english/question/3/{call_id}")
             return str(resp)
         else:
             # If the caller didn't choose 1 or 2, apologize and ask them again
@@ -225,13 +242,13 @@ def english_question_2():
     gather.say("Press 1 for caller. Press 2 for volunteer.", voice="woman", language="en-gb")
     resp.append(gather)
 
-    resp.redirect('/english/question/2')
+    resp.redirect(f'/english/question/2/{call_id}')
 
     return str(resp)
 
 
-@app.route("/english/question/3", methods=['GET', 'POST'])
-def english_question_3():
+@app.route("/english/question/3/<call_id>", methods=['GET', 'POST'])
+def english_question_3(call_id):
     # Start our TwiML response
     resp = VoiceResponse()
     gather = Gather(num_digits=6, finish_on_key="#")
@@ -242,7 +259,7 @@ def english_question_3():
         finished_on_key = request.values['FinishedOnKey']
 
         if len(digits) == 5 and finished_on_key == "#":
-            # TODO: Save in Database
+            edit_call(call_id, "zip_code", digits)
             resp.say("Thank your for your contribution! Goodbye!", voice="woman", language="en-gb")
             return str(resp)
         else:
@@ -254,6 +271,6 @@ def english_question_3():
     gather.say("To start over, just hold the line", voice="woman", language="en-gb")
     resp.append(gather)
 
-    resp.redirect('/english/question/3')
+    resp.redirect(f'/english/question/3/{call_id}')
 
     return str(resp)
