@@ -6,7 +6,7 @@ from twilio.twiml.voice_response import VoiceResponse, Gather
 
 @app.route("/")
 def hello():
-    return "Hello World!"
+    return "Hilfe am Ohr Hotline. See our <a href='https://www.hilfe-am-ohr.de/'>Website</a> for more."
 
 
 @app.route("/hotline", methods=['GET', 'POST'])
